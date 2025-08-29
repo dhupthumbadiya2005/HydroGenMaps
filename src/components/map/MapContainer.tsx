@@ -4,6 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Button } from '@/components/ui/button';
 import { Crosshair } from 'lucide-react';
 import { MAPBOX_ACCESS_TOKEN } from '@/services/mapbox';
+import { Card } from '@/components/ui/card';
 
 interface MapContainerProps {
   center?: [number, number];
@@ -82,15 +83,85 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       .setLngLat(selectedLocation.coordinates)
       .addTo(map.current);
 
-    // Add radius circle (simplified - in real implementation would use proper GeoJSON)
+    // Create and add radius circle
     const radiusInDegrees = selectedLocation.radius / 111; // Rough conversion km to degrees
     
-    // Center map on selected location
+    // Remove existing radius circle layers if they exist
+    if (map.current.getLayer('radius-circle-fill')) {
+      map.current.removeLayer('radius-circle-fill');
+    }
+    if (map.current.getLayer('radius-circle-border')) {
+      map.current.removeLayer('radius-circle-border');
+    }
+    if (map.current.getSource('radius-circle')) {
+      map.current.removeSource('radius-circle');
+    }
+
+    // Create radius circle using GeoJSON
+    const circle = createCircle(selectedLocation.coordinates, radiusInDegrees);
+
+    // Add radius circle source
+    map.current.addSource('radius-circle', {
+      type: 'geojson',
+      data: circle
+    });
+
+    // Add radius circle fill layer (transparent)
+    map.current.addLayer({
+      id: 'radius-circle-fill',
+      type: 'fill',
+      source: 'radius-circle',
+      paint: {
+        'fill-color': '#3b82f6',
+        'fill-opacity': 0.1 // Very transparent fill
+      }
+    });
+
+    // Add radius circle border layer
+    map.current.addLayer({
+      id: 'radius-circle-border',
+      type: 'line',
+      source: 'radius-circle',
+      paint: {
+        'line-color': '#3b82f6',
+        'line-width': 2,
+        'line-opacity': 0.6 // Semi-transparent border
+      }
+    });
+    
+    // Center map on selected location with appropriate zoom
+    const zoomLevel = Math.max(8, 15 - Math.log2(selectedLocation.radius));
     map.current.flyTo({
       center: selectedLocation.coordinates,
-      zoom: Math.max(10, 15 - selectedLocation.radius / 5)
+      zoom: zoomLevel,
+      duration: 2000
     });
   }, [selectedLocation]);
+
+  // Helper function to create a circle GeoJSON
+  const createCircle = (center: [number, number], radius: number) => {
+    const points = 64; // Number of points to create the circle
+    const coordinates: [number, number][] = [];
+    
+    for (let i = 0; i < points; i++) {
+      const angle = (i * 360) / points;
+      const lat = center[1] + (radius * Math.cos(angle * Math.PI / 180));
+      const lng = center[0] + (radius * Math.sin(angle * Math.PI / 180) / Math.cos(center[1] * Math.PI / 180));
+      coordinates.push([lng, lat]);
+    }
+    
+    // Close the circle
+    coordinates.push(coordinates[0]);
+    
+    return {
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [coordinates]
+      },
+      properties: {}
+    };
+  };
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -143,15 +214,16 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         </Button>
       </div>
 
-      {/* Placeholder overlay when no token */}
-      {MAPBOX_ACCESS_TOKEN === 'placeholder-mapbox-token' && (
-        <div className="absolute inset-0 bg-muted/50 flex items-center justify-center z-20 rounded-lg">
-          <div className="bg-card p-6 rounded-lg shadow-lg text-center max-w-sm">
-            <h3 className="font-semibold mb-2">Map Integration</h3>
-            <p className="text-sm text-muted-foreground">
-              Mapbox integration ready. Replace placeholder token with your actual Mapbox access token to enable full functionality.
-            </p>
-          </div>
+      {/* Radius Legend */}
+      {selectedLocation && (
+        <div className="absolute bottom-4 left-4 z-10">
+          <Card className="p-3 bg-card/95 backdrop-blur-sm border-primary/20 shadow-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-primary rounded-full opacity-10"></div>
+              <div className="w-3 h-3 border-2 border-primary rounded-full opacity-60"></div>
+              <span className="text-xs font-medium">Analysis Radius: {selectedLocation.radius} km</span>
+            </div>
+          </Card>
         </div>
       )}
     </div>

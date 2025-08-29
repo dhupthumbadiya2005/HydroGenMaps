@@ -2,7 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MapPin, Home } from "lucide-react";
+import { MapPin, Home, ArrowLeft } from "lucide-react";
 
 const NotFound = () => {
   const location = useLocation();
@@ -34,14 +34,21 @@ const NotFound = () => {
             <Button asChild className="w-full btn-gradient">
               <Link to="/explore">
                 <Home className="w-4 h-4 mr-2" />
-                Return to Explore
+                Go to Explore
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full">
               <Link to="/auth">
-                Go to Login
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Login
               </Link>
             </Button>
+          </div>
+
+          <div className="pt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground">
+              Attempted to access: <code className="bg-muted px-1 rounded text-xs">{location.pathname}</code>
+            </p>
           </div>
         </CardContent>
       </Card>

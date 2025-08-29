@@ -13,25 +13,43 @@ export const Explore: React.FC = () => {
   } | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
   const { toast } = useToast();
 
   const handleLocationSelect = async (location: LocationData, radius: number) => {
     setLoading(true);
+    setShowPopup(false);
+    setAnalysisResult(null);
+
     try {
-      // Update map
+      // First, update map to show the selected location
       setSelectedLocation({
         coordinates: location.coordinates,
         radius
+      });
+
+      // Wait for map to update and show location
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Show toast notification about analysis starting
+      toast({
+        title: "Analyzing location...",
+        description: `Analyzing hydrogen potential for ${location.name}`,
       });
 
       // Perform analysis
       const result = await analyzeLocation(location, radius);
       setAnalysisResult(result);
 
-      toast({
-        title: "Analysis complete!",
-        description: `Found hydrogen potential score of ${result.score}/100 for ${location.name}`,
-      });
+      // Wait 2-3 seconds to show the popup after analysis
+      setTimeout(() => {
+        setShowPopup(true);
+        toast({
+          title: "Analysis complete!",
+          description: `Found hydrogen potential score of ${result.score}/100 for ${location.name}`,
+        });
+      }, 2500);
+
     } catch (error) {
       console.error('Analysis failed:', error);
       toast({
@@ -63,6 +81,11 @@ export const Explore: React.FC = () => {
     setAnalysisResult(null);
   };
 
+  const handleClosePopup = () => {
+    setShowPopup(false);
+    setAnalysisResult(null);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Search Header */}
@@ -83,19 +106,34 @@ export const Explore: React.FC = () => {
 
       {/* Map Container */}
       <div className="flex-1 p-6">
-        <Card className="h-full overflow-hidden shadow-lg">
+        <Card className="h-full overflow-hidden shadow-lg relative">
           <MapContainer
             onLocationSelect={handleMapClick}
             selectedLocation={selectedLocation}
           />
+          
+          {/* Location Selected Indicator */}
+          {selectedLocation && !loading && !showPopup && (
+            <div className="absolute top-4 left-4 z-30">
+              <Card className="p-3 bg-card/95 backdrop-blur-sm border-primary/20 shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">Location selected</span>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Radius: {selectedLocation.radius} km
+                </div>
+              </Card>
+            </div>
+          )}
         </Card>
       </div>
 
       {/* Analysis Results Popup */}
-      {analysisResult && (
+      {analysisResult && showPopup && (
         <RecommendationPopup
           analysis={analysisResult}
-          onClose={() => setAnalysisResult(null)}
+          onClose={handleClosePopup}
           onGetRecommendations={handleGetRecommendations}
         />
       )}
@@ -107,6 +145,20 @@ export const Explore: React.FC = () => {
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               <span className="font-medium">Analyzing location...</span>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Analysis Complete Indicator */}
+      {analysisResult && !showPopup && !loading && (
+        <div className="fixed bottom-4 right-4 z-30">
+          <Card className="p-4 bg-success/10 border-success/20 shadow-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-success-foreground">
+                Analysis complete! Showing results...
+              </span>
             </div>
           </Card>
         </div>
