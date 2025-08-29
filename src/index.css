@@ -1,0 +1,252 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* HydroGenMaps Design System - Professional hydrogen/water theme
+All colors MUST be HSL for semantic theming.
+*/
+
+@layer base {
+  :root {
+    /* Light Theme - Clean and Professional */
+    --background: 210 40% 99%;
+    --foreground: 225 20% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 225 20% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 20% 20%;
+
+    /* Hydrogen Blue Primary Palette */
+    --primary: 210 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 210 100% 45%;
+    --primary-light: 210 100% 95%;
+
+    /* Secondary Water Tones */
+    --secondary: 200 20% 96%;
+    --secondary-foreground: 225 20% 25%;
+    --secondary-hover: 200 20% 92%;
+
+    /* Accent Hydrogen Green */
+    --accent: 160 60% 50%;
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 160 60% 95%;
+
+    /* Neutral Grays */
+    --muted: 210 15% 95%;
+    --muted-foreground: 215 15% 45%;
+
+    /* Status Colors */
+    --success: 120 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 100% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Interactive Elements */
+    --border: 210 20% 85%;
+    --input: 210 20% 95%;
+    --ring: 210 100% 50%;
+
+    /* Layout Specific */
+    --sidebar-bg: 210 15% 98%;
+    --sidebar-border: 210 20% 90%;
+    --header-bg: 0 0% 100%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 50%), hsl(200 100% 60%));
+    --gradient-accent: linear-gradient(135deg, hsl(160 60% 50%), hsl(180 60% 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(210 100% 50%), hsl(200 100% 60%), hsl(160 60% 50%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px hsl(210 20% 50% / 0.1);
+    --shadow-md: 0 4px 6px hsl(210 20% 50% / 0.15);
+    --shadow-lg: 0 10px 25px hsl(210 20% 50% / 0.15);
+    --shadow-glow: 0 0 20px hsl(210 100% 50% / 0.3);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark Theme - Professional Deep Waters */
+    --background: 220 25% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 220 25% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 25% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary stays bright for contrast */
+    --primary: 210 100% 55%;
+    --primary-foreground: 220 25% 8%;
+    --primary-hover: 210 100% 50%;
+    --primary-light: 210 80% 15%;
+
+    /* Dark Secondary */
+    --secondary: 220 20% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --secondary-hover: 220 20% 18%;
+
+    /* Accent adapted for dark */
+    --accent: 160 60% 55%;
+    --accent-foreground: 220 25% 8%;
+    --accent-light: 160 40% 15%;
+
+    /* Dark Neutrals */
+    --muted: 220 20% 15%;
+    --muted-foreground: 210 20% 65%;
+
+    /* Status Colors for Dark */
+    --success: 120 60% 50%;
+    --success-foreground: 220 25% 8%;
+    --warning: 45 90% 55%;
+    --warning-foreground: 220 25% 8%;
+    --destructive: 0 65% 60%;
+    --destructive-foreground: 220 25% 8%;
+
+    /* Dark Interactive */
+    --border: 220 20% 20%;
+    --input: 220 20% 15%;
+    --ring: 210 100% 55%;
+
+    /* Dark Layout */
+    --sidebar-bg: 220 25% 6%;
+    --sidebar-border: 220 20% 18%;
+    --header-bg: 220 25% 10%;
+
+    /* Dark Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 55%), hsl(200 100% 65%));
+    --gradient-accent: linear-gradient(135deg, hsl(160 60% 55%), hsl(180 60% 60%));
+    --gradient-hero: linear-gradient(135deg, hsl(210 100% 55%), hsl(200 100% 65%), hsl(160 60% 55%));
+
+    /* Dark Shadows */
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 10px 25px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 20px hsl(210 100% 55% / 0.4);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  /* Map container styles */
+  .mapboxgl-popup-content {
+    @apply bg-card border border-border rounded-lg shadow-lg;
+  }
+
+  .mapboxgl-popup-close-button {
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  /* Custom button variants */
+  .btn-gradient {
+    background: var(--gradient-primary);
+    @apply text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300;
+  }
+
+  .btn-gradient:hover {
+    background: var(--gradient-primary);
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
