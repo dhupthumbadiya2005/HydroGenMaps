@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { MapContainer } from '@/components/map/MapContainer';
 import { SearchBar } from '@/components/map/SearchBar';
-import { RecommendationPopup } from '@/components/map/RecommendationPopup';
 import { Card } from '@/components/ui/card';
 import { LocationData, AnalysisResult, analyzeLocation } from '@/services/mapbox';
 import { useToast } from '@/hooks/use-toast';
@@ -11,9 +10,13 @@ export const Explore: React.FC = () => {
     coordinates: [number, number];
     radius: number;
   } | null>(null);
+  const [currentRadius, setCurrentRadius] = useState<number>(10); // Track current radius with default 10km
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [showRadiusSelector, setShowRadiusSelector] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<[number, number] | null>(null);
+  const [selectedRadiusOption, setSelectedRadiusOption] = useState<number>(10);
   const { toast } = useToast();
 
   const handleLocationSelect = async (location: LocationData, radius: number) => {
@@ -22,6 +25,9 @@ export const Explore: React.FC = () => {
     setAnalysisResult(null);
 
     try {
+      // Update current radius when user selects from search bar
+      setCurrentRadius(radius);
+      
       // First, update map to show the selected location
       setSelectedLocation({
         coordinates: location.coordinates,
@@ -46,9 +52,8 @@ export const Explore: React.FC = () => {
         setShowPopup(true);
         toast({
           title: "Analysis complete!",
-          description: `Found hydrogen potential score of ${result.score}/100 for ${location.name}`,
         });
-      }, 2500);
+      }, 1000);
 
     } catch (error) {
       console.error('Analysis failed:', error);
@@ -63,14 +68,34 @@ export const Explore: React.FC = () => {
   };
 
   const handleMapClick = (coordinates: [number, number]) => {
-    // For map clicks, use default 10km radius and create location data
+    // Store the clicked coordinates and show radius selector
+    setPendingLocation(coordinates);
+    setSelectedRadiusOption(currentRadius); // Default to current radius
+    setShowRadiusSelector(true);
+  };
+
+  const handleRadiusConfirm = () => {
+    if (!pendingLocation) return;
+    
+    // Update current radius for future use
+    setCurrentRadius(selectedRadiusOption);
+    
+    // Create location data and proceed with analysis
     const location: LocationData = {
       name: 'Selected Location',
-      coordinates,
-      address: `${coordinates[1].toFixed(4)}, ${coordinates[0].toFixed(4)}`
+      coordinates: pendingLocation,
+      address: `${pendingLocation[1].toFixed(4)}, ${pendingLocation[0].toFixed(4)}`
     };
     
-    handleLocationSelect(location, 10);
+    // Close radius selector and proceed
+    setShowRadiusSelector(false);
+    setPendingLocation(null);
+    handleLocationSelect(location, selectedRadiusOption);
+  };
+
+  const handleRadiusCancel = () => {
+    setShowRadiusSelector(false);
+    setPendingLocation(null);
   };
 
   const handleGetRecommendations = () => {
@@ -129,13 +154,61 @@ export const Explore: React.FC = () => {
         </Card>
       </div>
 
-      {/* Analysis Results Popup */}
-      {analysisResult && showPopup && (
-        <RecommendationPopup
-          analysis={analysisResult}
-          onClose={handleClosePopup}
-          onGetRecommendations={handleGetRecommendations}
-        />
+      
+
+      {/* Radius Selector Modal */}
+      {showRadiusSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold mb-2">Select Analysis Radius</h3>
+              <p className="text-sm text-muted-foreground">
+                Choose the radius for analyzing this location
+              </p>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              {[5, 10, 20, 30, 50, 100].map((radius) => (
+                <label
+                  key={radius}
+                  className="flex items-center space-x-3 p-3 rounded-lg border cursor-pointer hover:bg-secondary/50 transition-colors"
+                  style={{
+                    backgroundColor: selectedRadiusOption === radius ? 'hsl(var(--primary) / 0.1)' : 'transparent',
+                    borderColor: selectedRadiusOption === radius ? 'hsl(var(--primary))' : 'hsl(var(--border))'
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="radius"
+                    value={radius}
+                    checked={selectedRadiusOption === radius}
+                    onChange={(e) => setSelectedRadiusOption(Number(e.target.value))}
+                    className="w-4 h-4 text-primary"
+                  />
+                  <span className="flex-1 font-medium">{radius} km radius</span>
+                  <span className="text-xs text-muted-foreground">
+                    {radius <= 10 ? 'Small area' : radius <= 30 ? 'Medium area' : 'Large area'}
+                  </span>
+                </label>
+              ))}
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={handleRadiusCancel}
+                className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRadiusConfirm}
+                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Analyze Location
+              </button>
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* Loading overlay */}
@@ -157,7 +230,7 @@ export const Explore: React.FC = () => {
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
               <span className="text-sm font-medium text-success-foreground">
-                Analysis complete! Showing results...
+                Analysis complete!
               </span>
             </div>
           </Card>
