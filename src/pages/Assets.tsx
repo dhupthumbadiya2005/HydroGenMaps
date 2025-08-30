@@ -28,6 +28,11 @@ interface Asset {
   category: string;
   capexEstimate: number;
   opexEstimate: number;
+  // Additional field names that might come from database
+  capex_estimate?: number;
+  opex_estimate?: number;
+  capex?: number;
+  opex?: number;
   ownership: 'public' | 'private';
   constructionStatus: 'constructed' | 'under_construction';
   notes: string;
@@ -67,47 +72,15 @@ const assetCategories = [
 
 // Mock initial data
 const initialAssets: Asset[] = [
-  {
-    id: '1',
-    name: 'Green Hydrogen Plant - Texas',
-    location: {
-      name: 'Houston',
-      address: 'Houston, TX, USA',
-      coordinates: [-95.3698, 29.7604]
-    },
-    category: 'Hydrogen Plants',
-    capexEstimate: 500,
-    opexEstimate: 50,
-    ownership: 'private',
-    constructionStatus: 'under_construction',
-    notes: 'Large-scale green hydrogen production facility with renewable energy integration.',
-    dateAdded: '2024-01-15',
-    status: 'planned'
-  },
-  {
-    id: '2',
-    name: 'Electrolyzer Station - California',
-    location: {
-      name: 'Los Angeles',
-      address: 'Los Angeles, CA, USA',
-      coordinates: [-118.2437, 34.0522]
-    },
-    category: 'Hydrogen Distribution Hubs (refuelling stations, industrial hubs, others)',
-    capexEstimate: 250,
-    opexEstimate: 25,
-    ownership: 'public',
-    constructionStatus: 'constructed',
-    notes: 'High-efficiency PEM electrolyzer for industrial hydrogen supply.',
-    dateAdded: '2024-02-20',
-    status: 'active'
-  }
+ //dummy
 ];
 
 export const Assets: React.FC = () => {
   const [user, loading, error] = useAuthState(auth); // Firebase auth state
-  const [assets, setAssets] = useState<Asset[]>(initialAssets);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [loadingAssets, setLoadingAssets] = useState(false);
 
   // Location selector states
   const [showLocationSelector, setShowLocationSelector] = useState(false);
@@ -141,6 +114,60 @@ export const Assets: React.FC = () => {
   });
 
   const { toast } = useToast();
+
+  // Fetch assets from database for the current user
+  const fetchUserAssets = async () => {
+    if (!user?.email) return;
+    
+    setLoadingAssets(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.ASSETS.GET_ALL, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assets: ${response.status}`);
+      }
+
+      const allAssets = await response.json();
+      console.log('All assets from database:', allAssets);
+      
+      // Filter assets to show only those belonging to the current user
+      const userAssets = allAssets.filter((asset: any) => 
+        asset.userEmail === user.email || asset.user_email === user.email
+      );
+      
+      console.log('Filtered user assets:', userAssets);
+      setAssets(userAssets);
+      
+      toast({
+        title: "Assets loaded",
+        description: `Found ${userAssets.length} assets in your portfolio.`,
+      });
+      
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+      toast({
+        title: "Failed to load assets",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+      // Fallback to empty array
+      setAssets([]);
+    } finally {
+      setLoadingAssets(false);
+    }
+  };
+
+  // Fetch assets when component mounts or user changes
+  useEffect(() => {
+    if (user?.email) {
+      fetchUserAssets();
+    }
+  }, [user?.email]);
 
   // Generate unique asset ID based on user email and asset name
   const generateAssetId = (email: string, assetName: string): string => {
@@ -541,7 +568,8 @@ export const Assets: React.FC = () => {
         });
       } else {
         const newAsset = await createAsset(assetData);
-        setAssets(prev => [...prev, newAsset]);
+        // Refresh the assets list from database instead of just adding locally
+        await fetchUserAssets();
         toast({
           title: "Asset created",
           description: "New asset has been added to your portfolio.",
@@ -578,7 +606,8 @@ export const Assets: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await deleteAsset(id);
-      setAssets(prev => prev.filter(asset => asset.id !== id));
+      // Refresh the assets list from database instead of just filtering locally
+      await fetchUserAssets();
       toast({
         title: "Asset deleted",
         description: "Asset has been removed from your portfolio.",
@@ -610,8 +639,27 @@ export const Assets: React.FC = () => {
     }
   };
 
-  const totalCapex = assets.reduce((sum, asset) => sum + asset.capexEstimate, 0);
-  const totalOpex = assets.reduce((sum, asset) => sum + asset.opexEstimate, 0);
+  // Calculate totals with proper type checking and field mapping
+  const totalCapex = assets.reduce((sum, asset) => {
+    // Handle different possible field names from database
+    const capex = asset.capexEstimate || asset.capex_estimate || asset.capex || 0;
+    // Ensure it's a number and convert to number if it's a string
+    const capexNumber = typeof capex === 'string' ? parseFloat(capex) || 0 : Number(capex) || 0;
+    return sum + capexNumber;
+  }, 0);
+  
+  const totalOpex = assets.reduce((sum, asset) => {
+    // Handle different possible field names from database
+    const opex = asset.opexEstimate || asset.opex_estimate || asset.opex || 0;
+    // Ensure it's a number and convert to number if it's a string
+    const opexNumber = typeof opex === 'string' ? parseFloat(opex) || 0 : Number(opex) || 0;
+    return sum + opexNumber;
+  }, 0);
+
+  // Debug logging to see what's in the assets
+  console.log('Assets for total calculation:', assets);
+  console.log('Total CAPEX calculation:', totalCapex);
+  console.log('Total OPEX calculation:', totalOpex);
 
   return (
     <div className="p-6 space-y-6">
@@ -871,7 +919,7 @@ export const Assets: React.FC = () => {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6 flex items-center space-x-4">
             <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -889,7 +937,9 @@ export const Assets: React.FC = () => {
               <DollarSign className="w-6 h-6 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(totalCapex)}</p>
+              <p className="text-2xl font-bold">
+                {isNaN(totalCapex) || totalCapex === 0 ? '₹0' : formatCurrency(totalCapex)}
+              </p>
               <p className="text-muted-foreground">Total CAPEX</p>
             </div>
           </CardContent>
@@ -900,26 +950,18 @@ export const Assets: React.FC = () => {
               <DollarSign className="w-6 h-6 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(totalOpex)}</p>
+              <p className="text-2xl font-bold">
+                {isNaN(totalOpex) || totalOpex === 0 ? '₹0' : formatCurrency(totalOpex)}
+              </p>
               <p className="text-muted-foreground">Total OPEX</p>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-6 flex items-center space-x-4">
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-accent" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{assets.filter(a => a.status === 'active').length}</p>
-              <p className="text-muted-foreground">Active Assets</p>
-            </div>
-          </CardContent>
-        </Card>
+        
       </div>
 
       {/* Assets List */}
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
         {assets.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">

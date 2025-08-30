@@ -7,7 +7,7 @@ export const API_ENDPOINTS = {
     CREATE: 'http://192.168.1.6:8000/api/v3/assets/',
     UPDATE: 'http://192.168.1.6:8000/api/v3/assets/',
     DELETE: 'http://192.168.1.6:8000/api/v3/assets/',
-    GET_ALL: 'http://192.168.1.6:8000/api/v3/assets/',
+    GET_ALL: 'http://192.168.1.6:8000/api/assets/list/',
     GET_BY_ID: 'http://192.168.1.6:8000/api/v3/assets/'
   },
   
@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
     REVERSE_GEOCODE: '/api/location/reverse-geocode',
     TRACKING: 'http://192.168.1.6:8000/api/explore/search/' // when user clicking on any location 
   },
+
   
   // Analysis Services
   ANALYSIS: {
@@ -25,6 +26,8 @@ export const API_ENDPOINTS = {
     RECOMMENDATION_ANALYSIS: 'http://192.168.1.6:8000/api/analysis/submit/' // data sent after clicking on the analyze button after popup
   }
 };
+
+//
 
 // Base API URL - can be changed for different environments
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
