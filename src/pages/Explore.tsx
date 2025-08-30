@@ -10,11 +10,12 @@ import { Slider } from '@/components/ui/slider';
 import { LocationData, AnalysisResult, analyzeLocation } from '@/services/mapbox';
 import { useToast } from '@/hooks/use-toast';
 import { API_ENDPOINTS, getApiUrl } from '@/services/endpoints';
-import { Lightbulb, X, Loader2 } from 'lucide-react';
+import { Lightbulb, X, Loader2, BarChart3 } from 'lucide-react';
 import { auth } from '../services/firebase'; // Import your Firebase auth config
 import { useAuthState } from 'react-firebase-hooks/auth'; // Optional: if using this library
 // Alternative import if not using react-firebase-hooks:
-// import { onAuthStateChanged, User } from 'firebase/auth';
+// import { onAuthStateChanged, User } from 'firebase-hooks/auth';
+import { ReportModal, AnalysisResponse } from '@/components/reports';
 
 interface RecommendationForm {
   infrastructureProximity: number;
@@ -58,6 +59,10 @@ export const Explore: React.FC = () => {
     description: ''
   });
   const [analyzingRecommendation, setAnalyzingRecommendation] = useState(false);
+  
+  // Report modal states
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [analysisReport, setAnalysisReport] = useState<AnalysisResponse | null>(null);
   
   // Firebase Auth state
   const [user, loading_auth, error] = useAuthState(auth); // If using react-firebase-hooks
@@ -402,54 +407,24 @@ export const Explore: React.FC = () => {
     }
 
     try {
+      // Prepare data in the new format for GET_RECOMMENDATION endpoint
       const analysisData = {
-        location: {
-          coordinates: {
-            latitude: truncateTo8(selectedLocation.coordinates[1]),
-            longitude: truncateTo8(selectedLocation.coordinates[0])
-
-          },
-          radius: Number(selectedLocation.radius)
-        },
-        factors: {
-          infrastructureProximity: Number(sliderToApiValue(recommendationForm.infrastructureProximity)),
-          environmentLandFactors: Number(sliderToApiValue(recommendationForm.environmentLandFactors)),
-          economicPolicyDrivers: Number(sliderToApiValue(recommendationForm.economicPolicyDrivers))
-        },
+        curr_lat: truncateTo8(selectedLocation.coordinates[1]),
+        curr_lon: truncateTo8(selectedLocation.coordinates[0]),
+        curr_range: Number(selectedLocation.radius),
+        w_infra: Number(sliderToApiValue(recommendationForm.infrastructureProximity)),
+        w_econ: Number(sliderToApiValue(recommendationForm.economicPolicyDrivers)),
+        w_env: Number(sliderToApiValue(recommendationForm.environmentLandFactors)),
         description: recommendationForm.description || "",
         userEmail: userEmail
       };
 
       // Log the request data for debugging
-      console.log('Sending recommendation analysis request to:', API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS);
+      console.log('Sending recommendation analysis request to:', API_ENDPOINTS.ANALYSIS.GET_RECOMMENDATION);
       console.log('Request payload:', analysisData);
       console.log('Request body (JSON):', JSON.stringify(analysisData, null, 2));
 
-      // Test if the endpoint exists before making the request
-      const endpointExists = await testEndpoint(API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS);
-      if (!endpointExists) {
-        console.warn('Primary endpoint not found, trying alternatives...');
-        
-        // Try alternative endpoints
-        const alternatives = [
-          'http://192.168.1.6:8000/api/analysis/submit/',
-          'http://192.168.1.6:8000/api/analysis/recommendations/',
-          'http://192.168.1.6:8000/api/analysis/',
-          'http://192.168.1.6:8000/api/recommendations/',
-          'http://192.168.1.6:8000/api/analysis/submit'
-        ];
-        
-        for (const alt of alternatives) {
-          if (await testEndpoint(alt)) {
-            console.log('Found working endpoint:', alt);
-            // Update the endpoint for this request
-            API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS = alt;
-            break;
-          }
-        }
-      }
-
-      const response = await fetch(API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS, {
+      const response = await fetch(API_ENDPOINTS.ANALYSIS.GET_RECOMMENDATION, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -491,13 +466,16 @@ export const Explore: React.FC = () => {
       const result = await response.json();
       console.log('Analysis response:', result);
       
-      toast({
-        title: "Recommendation analysis complete!",
-        description: "Your detailed analysis has been processed.",
-      });
+      // Store the analysis report
+      setAnalysisReport(result);
+      
+      
 
       // Close the slider popup
       setShowRecommendationSlider(false);
+      
+      // Show the report modal
+      setShowReportModal(true);
       
       // Reset form
       setRecommendationForm({
@@ -629,6 +607,19 @@ export const Explore: React.FC = () => {
             >
               <Lightbulb className="w-4 h-4 text-blue-600" />
               <span>Get Recommendations</span>
+            </Button>
+          </div>
+        )}
+
+        {/* View Report Button - Show when report is available */}
+        {analysisReport && !showRecommendationSlider && (
+          <div className="fixed right-6 top-1/2 transform -translate-y-1/2 z-30 mt-20">
+            <Button
+              onClick={() => setShowReportModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white border border-green-600 hover:border-green-700 shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2 px-4 py-2.5 rounded-lg font-medium text-sm"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>View Report</span>
             </Button>
           </div>
         )}
@@ -817,11 +808,19 @@ export const Explore: React.FC = () => {
         </div>
       )}
 
-      
-
- 
-
-      
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        data={analysisReport}
+        location={selectedLocation ? {
+          coordinates: selectedLocation.coordinates,
+          radius: selectedLocation.radius,
+          name: 'Selected Location',
+          address: `${selectedLocation.coordinates[1].toFixed(4)}, ${selectedLocation.coordinates[0].toFixed(4)}`
+        } : null}
+        userEmail={getUserEmail() || ''}
+      />
     </div>
   );
 };

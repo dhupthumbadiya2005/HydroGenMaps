@@ -23,7 +23,12 @@ export const API_ENDPOINTS = {
   ANALYSIS: {
     HYDROGEN_POTENTIAL: '/api/analysis/hydrogen-potential',
     SITE_ANALYSIS: '/api/analysis/site',
-    RECOMMENDATION_ANALYSIS: 'http://192.168.1.6:8000/api/analysis/submit/' // data sent after clicking on the analyze button after popup
+    RECOMMENDATION_ANALYSIS: 'http://192.168.1.6:8000/api/analysis/submit/' , // data sent after clicking on the analyze button after popup
+  
+    
+    GET_RECOMMENDATION :'http://192.168.1.7:8007/analyse' ,//DATA WE GET TO SHOW USER recommendation
+
+     SAVE_REPORT : 'http://192.168.1.6:8000/api/feedback/submit/' // SAVE REPORT POST REQ
   }
 };
 
