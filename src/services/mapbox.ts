@@ -1,6 +1,6 @@
 // Mapbox configuration and utilities
-export const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiZHRodW1iYWRpeWEiLCJhIjoiY21leGFkdHFoMHdhOTJpcjFidmo2ZWx1ayJ9.lu6vDXjGqDEwYgaep86Lew'; // To be replaced with actual token
-
+ // To be replaced with actual token
+export const MAPBOX_ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 export interface LocationData {
   name: string;
   coordinates: [number, number]; // [longitude, latitude]
