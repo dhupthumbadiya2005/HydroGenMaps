@@ -11,12 +11,29 @@ import { LocationData, AnalysisResult, analyzeLocation } from '@/services/mapbox
 import { useToast } from '@/hooks/use-toast';
 import { API_ENDPOINTS, getApiUrl } from '@/services/endpoints';
 import { Lightbulb, X, Loader2 } from 'lucide-react';
+import { auth } from '../services/firebase'; // Import your Firebase auth config
+import { useAuthState } from 'react-firebase-hooks/auth'; // Optional: if using this library
+// Alternative import if not using react-firebase-hooks:
+// import { onAuthStateChanged, User } from 'firebase/auth';
 
 interface RecommendationForm {
   infrastructureProximity: number;
   environmentLandFactors: number;
   economicPolicyDrivers: number;
   description: string;
+}
+
+interface ApiLocation {
+  id: string;
+  visibility: 'public' | 'private';
+  coordinates: [number, number];
+  // Additional fields that might be in the API response
+  name?: string;
+  address?: string;
+  type?: string;
+  description?: string;
+  status?: string;
+  // Add any other fields that might be present in the actual API response
 }
 
 export const Explore: React.FC = () => {
@@ -42,7 +59,54 @@ export const Explore: React.FC = () => {
   });
   const [analyzingRecommendation, setAnalyzingRecommendation] = useState(false);
   
+  // Firebase Auth state
+  const [user, loading_auth, error] = useAuthState(auth); // If using react-firebase-hooks
+  
+  // Alternative approach if not using react-firebase-hooks:
+  // const [user, setUser] = useState<User | null>(null);
+  // useEffect(() => {
+  //   const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+  //     setUser(currentUser);
+  //   });
+  //   return () => unsubscribe();
+  // }, []);
+
+  // API locations state
+  const [apiLocations, setApiLocations] = useState<ApiLocation[]>([]);
+  
   const { toast } = useToast();
+
+  // Get user email - handle both email/password and Google auth
+  const getUserEmail = (): string | null => {
+    if (!user) return null;
+    
+    // For email/password auth and Google auth, email is directly available
+    return user.email;
+  };
+
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // Check if location is within radius
+  const isLocationInRadius = (locationCoords: [number, number], selectedCoords: [number, number], radius: number): boolean => {
+    const distance = calculateDistance(
+      selectedCoords[1], // latitude
+      selectedCoords[0], // longitude
+      locationCoords[1], // latitude
+      locationCoords[0]  // longitude
+    );
+    return distance <= radius;
+  };
 
   // Track location and range changes - send to endpoint
   useEffect(() => {
@@ -53,17 +117,27 @@ export const Explore: React.FC = () => {
 
   // Send location tracking data to endpoint
   const sendLocationTracking = async (coordinates: [number, number], radius: number) => {
+    const userEmail = getUserEmail();
+    
+    if (!userEmail) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to track location data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const trackingData = {
         coordinates: {
           latitude: coordinates[1],
           longitude: coordinates[0]
         },
-        radius: radius,
-        
+        radius: radius
       };
 
-      const response = await fetch(getApiUrl(API_ENDPOINTS.LOCATION.TRACKING), {
+      const response = await fetch((API_ENDPOINTS.LOCATION.TRACKING), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,13 +147,81 @@ export const Explore: React.FC = () => {
 
       if (!response.ok) {
         console.error('Location tracking failed:', response.status);
+        return;
       }
+
+      // Parse the response to get locations
+      const responseData = await response.json();
+      console.log('API Response - Raw data:', responseData);
+      console.log('API Response - Type:', typeof responseData);
+      console.log('API Response - Keys:', Object.keys(responseData));
+      
+      // Handle different possible response structures
+      let locations: ApiLocation[] = [];
+      if (Array.isArray(responseData)) {
+        locations = responseData;
+        console.log('Response is an array, using directly');
+      } else if (responseData.locations && Array.isArray(responseData.locations)) {
+        locations = responseData.locations;
+        console.log('Found locations array in response.locations');
+      } else if (responseData.data && Array.isArray(responseData.data)) {
+        locations = responseData.data;
+        console.log('Found locations array in response.data');
+      } else if (responseData.results && Array.isArray(responseData.results)) {
+        locations = responseData.results;
+        console.log('Found locations array in response.results');
+      } else {
+        console.warn('Unexpected API response structure:', responseData);
+        console.log('Available keys in response:', Object.keys(responseData));
+        locations = [];
+      }
+      
+      console.log('Parsed locations:', locations);
+      if (locations.length > 0) {
+        console.log('First location structure:', locations[0]);
+        console.log('First location keys:', Object.keys(locations[0]));
+      }
+      
+      // Filter only public locations
+      const publicLocations = locations.filter(location => location.visibility === 'public');
+      console.log('Filtered public locations:', publicLocations);
+      setApiLocations(publicLocations);
+      
+      // Show notification about found locations
+      if (publicLocations.length > 0) {
+        const inRadius = publicLocations.filter(loc => 
+          isLocationInRadius(loc.coordinates, [trackingData.coordinates.longitude, trackingData.coordinates.latitude], radius)
+        ).length;
+        const outsideRadius = publicLocations.length - inRadius;
+        
+        toast({
+          title: "Locations found!",
+          description: `${publicLocations.length} locations found (${inRadius} in radius, ${outsideRadius} outside)`,
+        });
+      } else {
+        toast({
+          title: "No locations found",
+          description: "No public locations found in this area.",
+          variant: "destructive",
+        });
+      }
+
     } catch (error) {
       console.error('Error sending location tracking:', error);
     }
   };
 
   const handleLocationSelect = async (location: LocationData, radius: number) => {
+    // Check if user is authenticated
+    if (!getUserEmail()) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to analyze locations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     setShowPopup(false);
     setAnalysisResult(null);
@@ -98,10 +240,7 @@ export const Explore: React.FC = () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Show toast notification about analysis starting
-      toast({
-        title: "Analyzing location...",
-        description: `Analyzing hydrogen potential for ${location.name}`,
-      });
+      
 
       // Perform analysis
       const result = await analyzeLocation(location, radius);
@@ -129,6 +268,16 @@ export const Explore: React.FC = () => {
   };
 
   const handleMapClick = (coordinates: [number, number]) => {
+    // Check if user is authenticated
+    if (!getUserEmail()) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to select locations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Store the clicked coordinates and show radius selector
     setPendingLocation(coordinates);
     setSelectedRadiusOption(currentRadius);
@@ -169,6 +318,15 @@ export const Explore: React.FC = () => {
       return;
     }
     
+    if (!getUserEmail()) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to get recommendations.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setShowRecommendationSlider(true);
   };
 
@@ -192,10 +350,21 @@ export const Explore: React.FC = () => {
   };
 
   const handleAnalyzeRecommendation = async () => {
+    const userEmail = getUserEmail();
+    
     if (!selectedLocation) {
       toast({
         title: "No location selected",
         description: "Please select a location first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!userEmail) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to get recommendations.",
         variant: "destructive",
       });
       return;
@@ -218,10 +387,10 @@ export const Explore: React.FC = () => {
           economicPolicyDrivers: sliderToApiValue(recommendationForm.economicPolicyDrivers)
         },
         description: recommendationForm.description,
-        
+        userEmail: userEmail, // Include user email
       };
 
-      const response = await fetch(getApiUrl(API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS), {
+      const response = await fetch((API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -263,16 +432,65 @@ export const Explore: React.FC = () => {
     }
   };
 
+  // Show loading state while Firebase Auth is initializing
+  if (loading_auth) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Card className="p-6 shadow-xl">
+          <div className="flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <span className="font-medium">Loading...</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show authentication required state if user is not logged in
+  if (!user) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Card className="p-8 max-w-md mx-4 shadow-xl text-center">
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Please log in to explore hydrogen sites and analyze locations.
+            </p>
+            <Button 
+              onClick={() => {
+                // Redirect to login page or trigger login modal
+                // This depends on your auth implementation
+                window.location.href = '/login';
+              }}
+              className="btn-gradient"
+            >
+              Log In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Search Header */}
       <div className="p-6 border-b border-border bg-card/50">
         <div className="max-w-4xl mx-auto">
-          <div className="mb-4">
-            <h1 className="text-2xl font-bold">Explore Hydrogen Sites</h1>
-            <p className="text-muted-foreground">
-              Search locations and analyze their hydrogen production potential
-            </p>
+          <div className="mb-4 flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold">Explore Hydrogen Sites</h1>
+              <p className="text-muted-foreground">
+                Search locations and analyze their hydrogen production potential
+              </p>
+            </div>
+            {/* User info display */}
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Logged in as:</p>
+              <p className="text-sm font-medium">{user.email}</p>
+            </div>
           </div>
           <SearchBar 
             onLocationSelect={handleLocationSelect}
@@ -287,6 +505,8 @@ export const Explore: React.FC = () => {
           <MapContainer
             onLocationSelect={handleMapClick}
             selectedLocation={selectedLocation}
+            apiLocations={apiLocations}
+            currentRadius={currentRadius}
           />
           
           {/* Location Selected Indicator */}
@@ -299,6 +519,9 @@ export const Explore: React.FC = () => {
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   Radius: {selectedLocation.radius} km
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Public locations found: {apiLocations.length}
                 </div>
               </Card>
             </div>
@@ -342,6 +565,11 @@ export const Explore: React.FC = () => {
               >
                 <X className="w-4 h-4" />
               </Button>
+            </div>
+
+            {/* User info in slider */}
+            <div className="text-xs text-muted-foreground border-b border-border pb-3">
+              Analysis for: {user.email}
             </div>
 
             {/* Sliders */}
@@ -502,31 +730,11 @@ export const Explore: React.FC = () => {
         </div>
       )}
 
-      {/* Loading overlay */}
-      {loading && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-40">
-          <Card className="p-6 shadow-xl">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              <span className="font-medium">Analyzing location...</span>
-            </div>
-          </Card>
-        </div>
-      )}
+      
 
-      {/* Analysis Complete Indicator */}
-      {analysisResult && !showPopup && !loading && (
-        <div className="fixed bottom-4 right-4 z-30">
-          <Card className="p-4 bg-success/10 border-success/20 shadow-lg">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium text-success-foreground">
-                Analysis complete!
-              </span>
-            </div>
-          </Card>
-        </div>
-      )}
+ 
+
+      
     </div>
   );
 };

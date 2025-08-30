@@ -18,46 +18,7 @@ interface Report {
 
 // Mock report data
 const mockReports: Report[] = [
-  {
-    id: '1',
-    name: 'Houston Hydrogen Potential Analysis',
-    location: 'Houston, TX, USA',
-    generatedAt: '2024-01-15T10:30:00Z',
-    status: 'completed',
-    size: '2.3 MB',
-    analysisRadius: 15,
-    score: 87
-  },
-  {
-    id: '2',
-    name: 'Los Angeles Green Energy Assessment',
-    location: 'Los Angeles, CA, USA',
-    generatedAt: '2024-01-20T14:45:00Z',
-    status: 'completed',
-    size: '1.8 MB',
-    analysisRadius: 10,
-    score: 74
-  },
-  {
-    id: '3',
-    name: 'Denver Industrial Zone Study',
-    location: 'Denver, CO, USA',
-    generatedAt: '2024-01-25T09:15:00Z',
-    status: 'processing',
-    size: '-',
-    analysisRadius: 20,
-    score: 0
-  },
-  {
-    id: '4',
-    name: 'Phoenix Solar-Hydrogen Integration',
-    location: 'Phoenix, AZ, USA',
-    generatedAt: '2024-01-28T16:20:00Z',
-    status: 'completed',
-    size: '3.1 MB',
-    analysisRadius: 25,
-    score: 92
-  }
+  //dummy data 
 ];
 
 export const Reports: React.FC = () => {
@@ -127,43 +88,7 @@ export const Reports: React.FC = () => {
         </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6 flex items-center space-x-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{reports.length}</p>
-              <p className="text-muted-foreground">Total Reports</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 flex items-center space-x-4">
-            <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
-              <Download className="w-6 h-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{completedReports}</p>
-              <p className="text-muted-foreground">Completed</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 flex items-center space-x-4">
-            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-              <span className="text-lg font-bold text-accent">{Math.round(avgScore)}</span>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Average Score</p>
-              <p className="text-muted-foreground">Out of 100</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+     
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
@@ -295,14 +220,7 @@ export const Reports: React.FC = () => {
         )}
       </div>
 
-      {/* Placeholder notice */}
-      <Card className="bg-accent-light/20 border-accent/20">
-        <CardContent className="p-4">
-          <p className="text-sm text-center">
-            🚀 <strong>Phase 2:</strong> Full report generation, PDF exports, and detailed analytics coming soon.
-          </p>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 };

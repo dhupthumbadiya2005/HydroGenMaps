@@ -4,25 +4,25 @@
 export const API_ENDPOINTS = {
   // Asset Management Endpoints
   ASSETS: {
-    CREATE: 'http://10.205.1.222:8000/api/v3/assets/',
-    UPDATE: 'http://10.205.1.222:8000/api/v3/assets/',
-    DELETE: 'http://10.205.1.222:8000/api/v3/assets/',
-    GET_ALL: 'http://10.205.1.222:8000/api/v3/assets/',
-    GET_BY_ID: 'http://10.205.1.222:8000/api/v3/assets/'
+    CREATE: 'http://192.168.1.6:8000/api/v3/assets/',
+    UPDATE: 'http://192.168.1.6:8000/api/v3/assets/',
+    DELETE: 'http://192.168.1.6:8000/api/v3/assets/',
+    GET_ALL: 'http://192.168.1.6:8000/api/v3/assets/',
+    GET_BY_ID: 'http://192.168.1.6:8000/api/v3/assets/'
   },
   
   // Location Services
   LOCATION: {
     GEOCODE: '/api/location/geocode',
     REVERSE_GEOCODE: '/api/location/reverse-geocode',
-    TRACKING: '/api/location-tracking' // when user clicking on any location 
+    TRACKING: 'http://192.168.1.6:8000/api/explore/search/' // when user clicking on any location 
   },
   
   // Analysis Services
   ANALYSIS: {
     HYDROGEN_POTENTIAL: '/api/analysis/hydrogen-potential',
     SITE_ANALYSIS: '/api/analysis/site',
-    RECOMMENDATION_ANALYSIS: '/api/recommendation-analysis' // data sent after clicking on the analyze button after popup
+    RECOMMENDATION_ANALYSIS: 'http://192.168.1.6:8000/api/analysis/submit/' // data sent after clicking on the analyze button after popup
   }
 };
 
