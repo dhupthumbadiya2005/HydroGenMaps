@@ -538,10 +538,10 @@ export const Explore: React.FC = () => {
           <div className="fixed right-6 top-1/2 transform -translate-y-1/2 z-30">
             <Button
               onClick={handleGetRecommendations}
-              className="btn-gradient shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 px-4 py-3 rounded-full"
+              className="bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 shadow-md hover:shadow-lg transition-all duration-200 flex items-center space-x-2 px-4 py-2.5 rounded-lg font-medium text-sm"
             >
-              <Lightbulb className="w-4 h-4" />
-              <span className="font-medium">Get Recommendation</span>
+              <Lightbulb className="w-4 h-4 text-blue-600" />
+              <span>Get Recommendations</span>
             </Button>
           </div>
         )}
