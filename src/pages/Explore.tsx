@@ -370,39 +370,126 @@ export const Explore: React.FC = () => {
       return;
     }
 
+    if (!recommendationForm.description.trim()) {
+      toast({
+        title: "Description required",
+        description: "Please provide a description of your current assets and investment plans.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setAnalyzingRecommendation(true);
+
+    function truncateTo8(num: number) {
+      const [intPart, decPart = ""] = num.toString().split(".");
+      return Number(intPart + "." + decPart.slice(0, 8));
+    }
+
+    // Function to test different endpoint variations
+    async function testEndpoint(endpoint: string): Promise<boolean> {
+      try {
+        const testResponse = await fetch(endpoint, {
+          method: 'OPTIONS', // Use OPTIONS to check if endpoint exists
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        return testResponse.ok || testResponse.status === 405; // 405 Method Not Allowed means endpoint exists
+      } catch {
+        return false;
+      }
+    }
 
     try {
       const analysisData = {
         location: {
           coordinates: {
-            latitude: selectedLocation.coordinates[1],
-            longitude: selectedLocation.coordinates[0]
+            latitude: truncateTo8(selectedLocation.coordinates[1]),
+            longitude: truncateTo8(selectedLocation.coordinates[0])
+
           },
-          radius: selectedLocation.radius
+          radius: Number(selectedLocation.radius)
         },
         factors: {
-          infrastructureProximity: sliderToApiValue(recommendationForm.infrastructureProximity),
-          environmentLandFactors: sliderToApiValue(recommendationForm.environmentLandFactors),
-          economicPolicyDrivers: sliderToApiValue(recommendationForm.economicPolicyDrivers)
+          infrastructureProximity: Number(sliderToApiValue(recommendationForm.infrastructureProximity)),
+          environmentLandFactors: Number(sliderToApiValue(recommendationForm.environmentLandFactors)),
+          economicPolicyDrivers: Number(sliderToApiValue(recommendationForm.economicPolicyDrivers))
         },
-        description: recommendationForm.description,
-        userEmail: userEmail, // Include user email
+        description: recommendationForm.description || "",
+        userEmail: userEmail
       };
 
-      const response = await fetch((API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS), {
+      // Log the request data for debugging
+      console.log('Sending recommendation analysis request to:', API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS);
+      console.log('Request payload:', analysisData);
+      console.log('Request body (JSON):', JSON.stringify(analysisData, null, 2));
+
+      // Test if the endpoint exists before making the request
+      const endpointExists = await testEndpoint(API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS);
+      if (!endpointExists) {
+        console.warn('Primary endpoint not found, trying alternatives...');
+        
+        // Try alternative endpoints
+        const alternatives = [
+          'http://192.168.1.6:8000/api/analysis/submit/',
+          'http://192.168.1.6:8000/api/analysis/recommendations/',
+          'http://192.168.1.6:8000/api/analysis/',
+          'http://192.168.1.6:8000/api/recommendations/',
+          'http://192.168.1.6:8000/api/analysis/submit'
+        ];
+        
+        for (const alt of alternatives) {
+          if (await testEndpoint(alt)) {
+            console.log('Found working endpoint:', alt);
+            // Update the endpoint for this request
+            API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS = alt;
+            break;
+          }
+        }
+      }
+
+      const response = await fetch(API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify(analysisData),
       });
 
       if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.status}`);
+        // Get detailed error information
+        let errorMessage = `Analysis failed: ${response.status} ${response.statusText}`;
+        
+        // Handle specific error cases
+        if (response.status === 404) {
+          errorMessage = `API endpoint not found. Please check if the backend server is running and the endpoint URL is correct.`;
+          console.error('404 Error - Endpoint not found:', API_ENDPOINTS.ANALYSIS.RECOMMENDATION_ANALYSIS);
+          console.error('Try these alternative endpoints:');
+          console.error('- http://192.168.1.6:8000/api/analysis/submit/');
+          console.error('- http://192.168.1.6:8000/api/analysis/recommendations/');
+          console.error('- http://192.168.1.6:8000/api/analysis/');
+        }
+        
+        try {
+          const errorData = await response.json();
+          console.error('Error response data:', errorData);
+          if (errorData.detail || errorData.message || errorData.error) {
+            errorMessage += ` - ${errorData.detail || errorData.message || errorData.error}`;
+          }
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+          if (response.status === 404) {
+            errorMessage += `\n\nServer returned HTML instead of JSON, indicating the endpoint doesn't exist.`;
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
+      console.log('Analysis response:', result);
       
       toast({
         title: "Recommendation analysis complete!",

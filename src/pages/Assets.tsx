@@ -62,7 +62,7 @@ const assetCategories = [
   'Land Suitability - Industrial',
   'Land Suitability - Forest',
   'Restricted/Protected Zone',
-  'Natural Distaster Prone Zone',
+  'Natural Disaster Prone Zone',
   'Natural Disaster Resilient Zone',
   'National Park / Biodiversity Zone',
   'Subsidy / Incentive Zone',
