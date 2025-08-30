@@ -41,11 +41,10 @@ const assetCategories = [
   'Hydrogen Plants',
   'Hydrogen Storage Facilities (tanks, underground storage, others)',
   'Hydrogen Distribution Hubs (refuelling stations, industrial hubs, others)',
-  'Hydrogen Pipelines',
+  
   
   // Supporting Renewable & Industrial Infrastructure
   'Renewable Energy Farms (solar, wind, hydro, biomass, others)',
-  'Power Transmission Lines (optional, if available)',
   'Water Sources (rivers, reservoirs, groundwater, others)',
   
   // Industrial/market demands
@@ -53,9 +52,17 @@ const assetCategories = [
   
   // Transport & Logistics
   'Ports (import/export potential)',
-  'Major Highways',
-  'Rail Networks',
-  'Airports'
+  'Airports/Railway Stations',
+  'Land Suitability - Residencial',
+  'Land Suitability - Industrial',
+  'Land Suitability - Forest',
+  'Restricted/Protected Zone',
+  'Natural Distaster Prone Zone',
+  'Natural Disaster Resilient Zone',
+  'National Park / Biodiversity Zone',
+  'Subsidy / Incentive Zone',
+  'Proximity to Industrial/Urban Cluster'
+  
 ];
 
 // Mock initial data

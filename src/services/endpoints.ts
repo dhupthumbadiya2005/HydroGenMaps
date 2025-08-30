@@ -14,13 +14,15 @@ export const API_ENDPOINTS = {
   // Location Services
   LOCATION: {
     GEOCODE: '/api/location/geocode',
-    REVERSE_GEOCODE: '/api/location/reverse-geocode'
+    REVERSE_GEOCODE: '/api/location/reverse-geocode',
+    TRACKING: '/api/location-tracking' // when user clicking on any location 
   },
   
   // Analysis Services
   ANALYSIS: {
     HYDROGEN_POTENTIAL: '/api/analysis/hydrogen-potential',
-    SITE_ANALYSIS: '/api/analysis/site'
+    SITE_ANALYSIS: '/api/analysis/site',
+    RECOMMENDATION_ANALYSIS: '/api/recommendation-analysis' // data sent after clicking on the analyze button after popup
   }
 };
 
