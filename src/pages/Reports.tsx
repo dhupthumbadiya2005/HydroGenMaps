@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { FileText, Eye, Trash2, Search } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { FileText, Eye, Trash2, Search, BarChart3, Send, Bot } from 'lucide-react';
 import { API_ENDPOINTS } from '@/services/endpoints';
 import { auth } from '../services/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -37,6 +38,14 @@ export const Reports: React.FC = () => {
     data: {} as AnalysisData,
     isOpen: false
   });
+
+  // Comparison states
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [selectedReports, setSelectedReports] = useState<string[]>([]);
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ type: 'user' | 'bot'; message: string }>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
 
   // Firebase Auth state
   const [user, loading_auth] = useAuthState(auth);
@@ -108,6 +117,135 @@ export const Reports: React.FC = () => {
     }
   };
 
+  // Comparison functions
+  const handleCompareReports = () => {
+    setShowCompareModal(true);
+    setSelectedReports([]);
+  };
+
+  const handleReportSelection = (reportId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedReports(prev => [...prev, reportId]);
+    } else {
+      setSelectedReports(prev => prev.filter(id => id !== reportId));
+    }
+  };
+
+  const handleStartComparison = () => {
+    if (selectedReports.length < 2) {
+      alert('Please select at least 2 reports to compare');
+      return;
+    }
+    setShowCompareModal(false);
+    setShowChatbot(true);
+    // Initialize chat with welcome message
+    setChatMessages([{
+      type: 'bot',
+      message: `Hello! I can help you compare ${selectedReports.length} reports. You can ask me questions about:
+
+• Infrastructure scores and trends
+• Environmental factors  
+• Economic viability
+• Overall performance comparison
+• Specific insights from any report
+
+What would you like to know?`
+    }]);
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !user?.email) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    
+    // Add user message to chat
+    setChatMessages(prev => [...prev, { type: 'user', message: userMessage }]);
+    setChatLoading(true);
+
+    try {
+      // Prepare the selected reports data with full JSON
+      const selectedReportsData = selectedReports.map(reportId => {
+        const report = reports.find(r => r.id === reportId);
+        if (!report) return null;
+        
+        try {
+          const analysisData = JSON.parse(report.message);
+          return {
+            name: report.name,
+            summary: analysisData.ai_summary // Send full summary, not truncated
+          };
+        } catch {
+          return {
+            name: report.name,
+            summary: 'Analysis data available'
+          };
+        }
+      }).filter(Boolean);
+
+      const requestData = {
+        user_question: userMessage,
+        user_email: user.email,
+        reports: selectedReportsData
+      };
+
+      console.log('Sending chat request:', requestData);
+
+      const response = await fetch(API_ENDPOINTS.ANALYSIS.CHAT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat API failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Chat response:', result);
+
+      // Add bot response to chat
+      setChatMessages(prev => [...prev, { type: 'bot', message: result.msg }]);
+
+    } catch (error) {
+      console.error('Error in chat:', error);
+      setChatMessages(prev => [...prev, { 
+        type: 'bot', 
+        message: 'Sorry, I encountered an error. Please try again.' 
+      }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const restartChatbot = () => {
+    setChatMessages([]);
+    setChatInput('');
+    setChatLoading(false);
+    // Re-initialize with welcome message
+    setChatMessages([{
+      type: 'bot',
+      message: `Hello! I can help you compare ${selectedReports.length} reports. You can ask me questions about:
+
+• Infrastructure scores and trends
+• Environmental factors  
+• Economic viability
+• Overall performance comparison
+• Specific insights from any report
+
+What would you like to know?`
+    }]);
+  };
+
   // Show loading state while Firebase Auth is initializing
   if (loading_auth) {
     return (
@@ -151,14 +289,24 @@ export const Reports: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Reports</h1>
-        <p className="text-muted-foreground">
-          View and manage your hydrogen site analysis reports
-        </p>
-        <div className="mt-2 text-sm text-muted-foreground">
-          Logged in as: {user.email}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold">Reports</h1>
+          <p className="text-muted-foreground">
+            View and manage your hydrogen site analysis reports
+          </p>
+          <div className="mt-2 text-sm text-muted-foreground">
+            Logged in as: {user.email}
+          </div>
         </div>
+        <Button
+          onClick={handleCompareReports}
+          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
+          disabled={reports.length < 2}
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>Compare Reports</span>
+        </Button>
       </div>
 
       {/* Filters */}
@@ -281,6 +429,143 @@ export const Reports: React.FC = () => {
           <div className="flex justify-end pt-6 border-t border-border">
             <Button variant="outline" onClick={() => setViewingReport(prev => ({ ...prev, isOpen: false }))}>
               Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Compare Reports Modal */}
+      <Dialog open={showCompareModal} onOpenChange={setShowCompareModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <BarChart3 className="w-5 h-5" />
+              <span>Select Reports to Compare</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select at least 2 reports to compare. You'll be able to ask questions about these reports using our AI chatbot.
+            </p>
+            
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {reports.map((report) => (
+                <div key={report.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50">
+                  <Checkbox
+                    id={report.id}
+                    checked={selectedReports.includes(report.id)}
+                    onCheckedChange={(checked) => 
+                      handleReportSelection(report.id, checked as boolean)
+                    }
+                  />
+                  <label htmlFor={report.id} className="flex-1 cursor-pointer">
+                    <div className="font-medium">{report.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Report ID: {report.id}
+                    </div>
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center pt-4 border-t">
+              <span className="text-sm text-muted-foreground">
+                {selectedReports.length} report(s) selected
+              </span>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCompareModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleStartComparison}
+                  disabled={selectedReports.length < 2}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Start Comparison
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Chatbot Modal */}
+      <Dialog open={showChatbot} onOpenChange={setShowChatbot}>
+        <DialogContent className="max-w-4xl max-h-[80vh] bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-white">
+              <Bot className="w-5 h-5 text-blue-400" />
+              <span>Report Comparison Assistant</span>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex flex-col h-96">
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+              {chatMessages.map((msg, index) => (
+                <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] p-3 rounded-lg ${
+                    msg.type === 'user' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-700 border border-gray-600 shadow-sm'
+                  }`}>
+                    <div className="whitespace-pre-wrap text-sm text-gray-100">{msg.message}</div>
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-700 border border-gray-600 p-3 rounded-lg shadow-sm">
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-400"></div>
+                      <span className="text-sm text-gray-300">AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Chat Input */}
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Ask a question about the selected reports..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={chatLoading}
+                className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!chatInput.trim() || chatLoading}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-4 border-t border-gray-700">
+            <Button
+              variant="outline"
+              onClick={restartChatbot}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Restart Chat
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowChatbot(false);
+                setChatMessages([]);
+                setChatInput('');
+              }}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Close Chat
             </Button>
           </div>
         </DialogContent>
