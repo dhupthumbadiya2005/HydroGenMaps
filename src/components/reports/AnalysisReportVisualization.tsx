@@ -151,15 +151,15 @@ export const AnalysisReportVisualization: React.FC<AnalysisReportVisualizationPr
 
   // Helper function to get color based on score
   function getScoreColor(score: number): string {
-    if (score < 40) return '#ef4444'; // red
-    if (score < 70) return '#f59e0b'; // yellow
+    if (score < 30) return '#ef4444'; // red
+    if (score < 50) return '#f59e0b'; // yellow
     return '#10b981'; // green
   }
 
   // Helper function to get score status
   function getScoreStatus(score: number): { icon: React.ReactNode; text: string; variant: 'default' | 'secondary' | 'destructive' } {
-    if (score < 40) return { icon: <AlertTriangle className="w-4 h-4" />, text: 'Low', variant: 'destructive' as const };
-    if (score < 70) return { icon: <Target className="w-4 h-4" />, text: 'Medium', variant: 'secondary' as const };
+    if (score < 30) return { icon: <AlertTriangle className="w-4 h-4" />, text: 'Low', variant: 'destructive' as const };
+    if (score < 50) return { icon: <Target className="w-4 h-4" />, text: 'Medium', variant: 'secondary' as const };
     return { icon: <CheckCircle className="w-4 h-4" />, text: 'High', variant: 'default' as const };
   }
 
@@ -174,7 +174,7 @@ export const AnalysisReportVisualization: React.FC<AnalysisReportVisualizationPr
           </CardTitle>
           <div className="mt-4">
             <div className="text-4xl font-bold text-white mb-2">
-              {parsedData.average}%
+              {parsedData.xgboostAggregate}%
             </div>
             <p className="text-blue-100 font-medium">Overall Score</p>
           </div>
@@ -187,8 +187,8 @@ export const AnalysisReportVisualization: React.FC<AnalysisReportVisualizationPr
           { label: 'Infrastructure Score', value: parsedData.infrastructure, icon: TrendingUp },
           { label: 'Environmental Score', value: parsedData.environmental, icon: CheckCircle },
           { label: 'Economic Score', value: parsedData.economic, icon: Target },
-          { label: 'XGBoost Aggregate', value: parsedData.xgboostAggregate, icon: BarChart3 },
-          { label: 'User Preference', value: parsedData.userCustomPref, icon: Lightbulb },
+          { label: 'Our Reccomendations', value: parsedData.xgboostAggregate, icon: BarChart3 },
+          { label: 'User Preference Influenced Score', value: parsedData.userCustomPref, icon: Lightbulb },
           { label: 'Average Score', value: parsedData.average, icon: TrendingUp }
         ].map((metric, index) => {
           const status = getScoreStatus(metric.value);

@@ -141,7 +141,7 @@ export const Reports: React.FC = () => {
     // Initialize chat with welcome message
     setChatMessages([{
       type: 'bot',
-      message: `Hello! I can help you compare ${selectedReports.length} reports. You can ask me questions about:
+      message: formatResponseText(`Hello! I can help you compare ${selectedReports.length} reports. You can ask me questions about:
 
 • Infrastructure scores and trends
 • Environmental factors  
@@ -149,7 +149,7 @@ export const Reports: React.FC = () => {
 • Overall performance comparison
 • Specific insights from any report
 
-What would you like to know?`
+What would you like to know?`)
     }]);
   };
 
@@ -206,14 +206,14 @@ What would you like to know?`
       const result = await response.json();
       console.log('Chat response:', result);
 
-      // Add bot response to chat
-      setChatMessages(prev => [...prev, { type: 'bot', message: result.msg }]);
+      // Add bot response to chat with formatting
+      setChatMessages(prev => [...prev, { type: 'bot', message: formatResponseText(result.msg) }]);
 
     } catch (error) {
       console.error('Error in chat:', error);
       setChatMessages(prev => [...prev, { 
         type: 'bot', 
-        message: 'Sorry, I encountered an error. Please try again.' 
+        message: formatResponseText('Sorry, I encountered an error. Please try again.') 
       }]);
     } finally {
       setChatLoading(false);
@@ -227,6 +227,35 @@ What would you like to know?`
     }
   };
 
+  // Function to format chatbot response text
+  const formatResponseText = (text: string): string => {
+    if (!text) return text;
+
+    let formattedText = text;
+
+    // Replace common bullet point indicators with proper bullet points
+    formattedText = formattedText.replace(/^[-*•]\s*/gm, '• ');
+    formattedText = formattedText.replace(/^\d+\.\s*/gm, (match) => match + ' ');
+
+    // Add proper spacing for lists
+    formattedText = formattedText.replace(/(\n•\s)/g, '\n\n• ');
+    formattedText = formattedText.replace(/(\n\d+\.\s)/g, '\n\n$1');
+
+    // Add spacing around section headers (lines that end with :)
+    formattedText = formattedText.replace(/([^:]+:)\n/g, '$1\n\n');
+
+    // Clean up multiple newlines
+    formattedText = formattedText.replace(/\n{3,}/g, '\n\n');
+
+    // Add spacing after periods that are followed by capital letters (new sentences)
+    formattedText = formattedText.replace(/\.([A-Z])/g, '.\n\n$1');
+
+    // Clean up the result
+    formattedText = formattedText.trim();
+
+    return formattedText;
+  };
+
   const restartChatbot = () => {
     setChatMessages([]);
     setChatInput('');
@@ -234,7 +263,7 @@ What would you like to know?`
     // Re-initialize with welcome message
     setChatMessages([{
       type: 'bot',
-      message: `Hello! I can help you compare ${selectedReports.length} reports. You can ask me questions about:
+      message: formatResponseText(`Hello! I can help you compare ${selectedReports.length} reports. You can ask me questions about:
 
 • Infrastructure scores and trends
 • Environmental factors  
@@ -242,7 +271,7 @@ What would you like to know?`
 • Overall performance comparison
 • Specific insights from any report
 
-What would you like to know?`
+What would you like to know?`)
     }]);
   };
 
