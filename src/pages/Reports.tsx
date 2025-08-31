@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { FileText, Download, Eye, Trash2, Search, Calendar, MapPin } from 'lucide-react';
+import { FileText, Eye, Trash2, Search } from 'lucide-react';
 import { API_ENDPOINTS } from '@/services/endpoints';
 import { auth } from '../services/firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -15,6 +15,7 @@ interface SavedReport {
   id: string;
   email: string;
   message: string; // This contains the JSON string of the analysis data
+  name: string; // Report name
   timestamp?: string;
 }
 
@@ -76,24 +77,12 @@ export const Reports: React.FC = () => {
   }, [user?.email]);
 
   const filteredReports = reports.filter(report => {
-    const matchesSearch = report.message.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = report.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         report.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Unknown date';
-    try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return 'Invalid date';
-    }
-  };
+
 
   const handleView = (report: SavedReport) => {
     try {
@@ -109,43 +98,7 @@ export const Reports: React.FC = () => {
     }
   };
 
-  const handleDownload = (report: SavedReport) => {
-    try {
-      const analysisData: AnalysisData = JSON.parse(report.message);
-      
-      // Create formatted report text
-      const reportText = `
-Hydrogen Site Analysis Report
-Generated: ${formatDate(report.timestamp || '')}
-User: ${report.email}
 
-SCORES:
-- Infrastructure: ${(parseFloat(analysisData.s_infra) * 100).toFixed(1)}%
-- Environmental: ${(parseFloat(analysisData.s_env) * 100).toFixed(1)}%
-- Economic: ${(parseFloat(analysisData.s_econ) * 100).toFixed(1)}%
-- Average: ${(parseFloat(analysisData.s_avg) * 100).toFixed(1)}%
-- XGBoost Aggregate: ${(parseFloat(analysisData.s_xgboost_aggregate) * 100).toFixed(1)}%
-- User Preference: ${(parseFloat(analysisData.s_user_custom_pref) * 100).toFixed(1)}%
-
-AI SUMMARY:
-${analysisData.ai_summary}
-      `.trim();
-
-      // Create and download file
-      const blob = new Blob([reportText], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `hydrogen-analysis-${report.id}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading report:', error);
-      alert('Error downloading report');
-    }
-  };
 
   const handleDelete = async (reportId: string) => {
     if (window.confirm('Are you sure you want to delete this report?')) {
@@ -216,7 +169,7 @@ ${analysisData.ai_summary}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  placeholder="Search reports..."
+                  placeholder="Search by report name or content..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -258,7 +211,7 @@ ${analysisData.ai_summary}
                 <div className="flex justify-between items-start">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center space-x-3">
-                      <h3 className="text-lg font-semibold">Analysis Report</h3>
+                      <h3 className="text-lg font-semibold">{report.name || 'Analysis Report'}</h3>
                       <Badge className="bg-success text-success-foreground">
                         Completed
                       </Badge>
@@ -266,12 +219,13 @@ ${analysisData.ai_summary}
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span>{formatDate(report.timestamp || '')}</span>
+                        <span className="text-muted-foreground">
+                          Report ID: {report.id}
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className="text-muted-foreground">
-                          Report ID: {report.id}
+                          Saved by: {report.email}
                         </span>
                       </div>
                     </div>
@@ -285,14 +239,6 @@ ${analysisData.ai_summary}
                       title="View Report"
                     >
                       <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleDownload(report)}
-                      title="Download Report"
-                    >
-                      <Download className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
