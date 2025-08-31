@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { AnalysisReportVisualization } from './AnalysisReportVisualization';
 import { AnalysisResponse, SaveReportRequest } from './types';
 import { API_ENDPOINTS } from '@/services/endpoints';
@@ -28,6 +30,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   userEmail
 }) => {
   const [isSaving, setIsSaving] = useState(false);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [reportName, setReportName] = useState('');
   const { toast } = useToast();
 
   const handleSaveReport = async () => {
@@ -40,12 +44,27 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       return;
     }
 
+    // Show name input popup first
+    setShowNameInput(true);
+  };
+
+  const handleSaveReportWithName = async () => {
+    if (!reportName.trim()) {
+      toast({
+        title: "Report Name Required",
+        description: "Please enter a name for your report.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
       const saveRequest: SaveReportRequest = {
         message: JSON.stringify(data),
-        email: userEmail
+        email: userEmail,
+        name: reportName.trim()
       };
 
       const response = await fetch(API_ENDPOINTS.ANALYSIS.SAVE_REPORT, {
@@ -68,6 +87,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         description: "Your analysis report has been saved successfully.",
       });
 
+      // Close name input popup and reset form
+      setShowNameInput(false);
+      setReportName('');
+      
       // Close modal after successful save
       onClose();
 
@@ -181,6 +204,60 @@ ${data.ai_summary}
           </Button>
         </div>
       </DialogContent>
+
+      {/* Name Input Popup */}
+      <Dialog open={showNameInput} onOpenChange={setShowNameInput}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Report</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="reportName">Report Name</Label>
+              <Input
+                id="reportName"
+                placeholder="Enter a name for your report..."
+                value={reportName}
+                onChange={(e) => setReportName(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveReportWithName();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowNameInput(false);
+                  setReportName('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveReportWithName}
+                disabled={isSaving || !reportName.trim()}
+                className="flex items-center space-x-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Report</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

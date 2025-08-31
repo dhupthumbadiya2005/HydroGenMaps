@@ -28,7 +28,11 @@ export const API_ENDPOINTS = {
     
     GET_RECOMMENDATION :'http://192.168.1.7:8007/analyse' ,//DATA WE GET TO SHOW USER recommendation
 
-     SAVE_REPORT : 'http://192.168.1.6:8000/api/feedback/submit/' // SAVE REPORT POST REQ
+    SAVE_REPORT : 'http://192.168.1.6:8000/api/feedback/submit/' ,// SAVE REPORT POST REQ
+
+    VIEW_REPORT : 'http://192.168.1.6:8000/api/feedback/list/' ,  // TO VIEW THE REPORT IN REPORT SECTION
+
+    CHAT : 'http://192.168.1.7:8007/reports' // FOR CHATBOT
   }
 };
 

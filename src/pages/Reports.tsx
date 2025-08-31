@@ -1,82 +1,199 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { FileText, Download, Eye, Trash2, Search, Calendar, MapPin } from 'lucide-react';
+import { API_ENDPOINTS } from '@/services/endpoints';
+import { auth } from '../services/firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { AnalysisReportVisualization } from '@/components/reports/AnalysisReportVisualization';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { X } from 'lucide-react';
 
-interface Report {
+interface SavedReport {
   id: string;
-  name: string;
-  location: string;
-  generatedAt: string;
-  status: 'completed' | 'processing' | 'failed';
-  size: string;
-  analysisRadius: number;
-  score: number;
+  email: string;
+  message: string; // This contains the JSON string of the analysis data
+  timestamp?: string;
 }
 
-// Mock report data
-const mockReports: Report[] = [
-  //dummy data 
-];
+interface AnalysisData {
+  s_infra: string;
+  s_env: string;
+  s_econ: string;
+  s_avg: string;
+  s_xgboost_aggregate: string;
+  s_user_custom_pref: string;
+  ai_summary: string;
+}
 
 export const Reports: React.FC = () => {
-  const [reports] = useState<Report[]>(mockReports);
+  const [reports, setReports] = useState<SavedReport[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Report['status'] | 'all'>('all');
+  const [loading, setLoading] = useState(true);
+  const [viewingReport, setViewingReport] = useState<{ data: AnalysisData; isOpen: boolean }>({
+    data: {} as AnalysisData,
+    isOpen: false
+  });
+
+  // Firebase Auth state
+  const [user, loading_auth] = useAuthState(auth);
+
+  // Fetch reports from API
+  useEffect(() => {
+    const fetchReports = async () => {
+      if (!user?.email) return;
+
+      try {
+        setLoading(true);
+        const response = await fetch(API_ENDPOINTS.ANALYSIS.VIEW_REPORT);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch reports: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Fetched reports:', data);
+
+        // Filter reports by current user's email
+        const userReports = data.filter((report: SavedReport) => 
+          report.email === user.email
+        );
+
+        setReports(userReports);
+      } catch (error) {
+        console.error('Error fetching reports:', error);
+        setReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user?.email) {
+      fetchReports();
+    }
+  }, [user?.email]);
 
   const filteredReports = reports.filter(report => {
-    const matchesSearch = report.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         report.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesSearch = report.message.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   });
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const getStatusColor = (status: Report['status']) => {
-    switch (status) {
-      case 'completed': return 'bg-success text-success-foreground';
-      case 'processing': return 'bg-warning text-warning-foreground';
-      case 'failed': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
+    if (!dateString) return 'Unknown date';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-success';
-    if (score >= 60) return 'text-warning';
-    return 'text-destructive';
+  const handleView = (report: SavedReport) => {
+    try {
+      // Parse the JSON message to get analysis data
+      const analysisData: AnalysisData = JSON.parse(report.message);
+      setViewingReport({
+        data: analysisData,
+        isOpen: true
+      });
+    } catch (error) {
+      console.error('Error parsing report data:', error);
+      alert('Error loading report data');
+    }
   };
 
-  const handleView = (reportId: string) => {
-    // Placeholder for view functionality
-    console.log('Viewing report:', reportId);
+  const handleDownload = (report: SavedReport) => {
+    try {
+      const analysisData: AnalysisData = JSON.parse(report.message);
+      
+      // Create formatted report text
+      const reportText = `
+Hydrogen Site Analysis Report
+Generated: ${formatDate(report.timestamp || '')}
+User: ${report.email}
+
+SCORES:
+- Infrastructure: ${(parseFloat(analysisData.s_infra) * 100).toFixed(1)}%
+- Environmental: ${(parseFloat(analysisData.s_env) * 100).toFixed(1)}%
+- Economic: ${(parseFloat(analysisData.s_econ) * 100).toFixed(1)}%
+- Average: ${(parseFloat(analysisData.s_avg) * 100).toFixed(1)}%
+- XGBoost Aggregate: ${(parseFloat(analysisData.s_xgboost_aggregate) * 100).toFixed(1)}%
+- User Preference: ${(parseFloat(analysisData.s_user_custom_pref) * 100).toFixed(1)}%
+
+AI SUMMARY:
+${analysisData.ai_summary}
+      `.trim();
+
+      // Create and download file
+      const blob = new Blob([reportText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hydrogen-analysis-${report.id}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('Error downloading report');
+    }
   };
 
-  const handleDownload = (reportId: string) => {
-    // Placeholder for download functionality
-    console.log('Downloading report:', reportId);
+  const handleDelete = async (reportId: string) => {
+    if (window.confirm('Are you sure you want to delete this report?')) {
+      // Placeholder for delete functionality
+      console.log('Deleting report:', reportId);
+      // You can implement actual delete API call here
+    }
   };
 
-  const handleDelete = (reportId: string) => {
-    // Placeholder for delete functionality
-    console.log('Deleting report:', reportId);
-  };
+  // Show loading state while Firebase Auth is initializing
+  if (loading_auth) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Card className="p-6 shadow-xl">
+          <div className="flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            <span className="font-medium">Loading...</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
-  const completedReports = reports.filter(r => r.status === 'completed').length;
-  const processingReports = reports.filter(r => r.status === 'processing').length;
-  const avgScore = reports.filter(r => r.status === 'completed' && r.score > 0)
-    .reduce((sum, r) => sum + r.score, 0) / completedReports || 0;
+  // Show authentication required state if user is not logged in
+  if (!user) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Card className="p-8 max-w-md mx-4 shadow-xl text-center">
+          <CardHeader>
+            <CardTitle>Authentication Required</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              Please log in to view your saved reports.
+            </p>
+            <Button 
+              onClick={() => {
+                window.location.href = '/login';
+              }}
+              className="btn-gradient"
+            >
+              Log In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -86,9 +203,11 @@ export const Reports: React.FC = () => {
         <p className="text-muted-foreground">
           View and manage your hydrogen site analysis reports
         </p>
+        <div className="mt-2 text-sm text-muted-foreground">
+          Logged in as: {user.email}
+        </div>
       </div>
 
-     
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
@@ -104,35 +223,29 @@ export const Reports: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="flex space-x-2">
-              {(['all', 'completed', 'processing', 'failed'] as const).map((status) => (
-                <Button
-                  key={status}
-                  variant={statusFilter === status ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setStatusFilter(status)}
-                  className="capitalize"
-                >
-                  {status}
-                </Button>
-              ))}
-            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Reports List */}
       <div className="space-y-4">
-        {filteredReports.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading reports...</p>
+            </CardContent>
+          </Card>
+        ) : filteredReports.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">
-                {searchQuery || statusFilter !== 'all' ? 'No reports found' : 'No reports yet'}
+                {searchQuery ? 'No reports found' : 'No reports yet'}
               </h3>
               <p className="text-muted-foreground">
-                {searchQuery || statusFilter !== 'all' 
-                  ? 'Try adjusting your search or filter criteria.'
+                {searchQuery 
+                  ? 'Try adjusting your search criteria.'
                   : 'Start analyzing locations to generate your first report.'
                 }
               </p>
@@ -145,55 +258,42 @@ export const Reports: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center space-x-3">
-                      <h3 className="text-lg font-semibold">{report.name}</h3>
-                      <Badge className={getStatusColor(report.status)}>
-                        {report.status}
+                      <h3 className="text-lg font-semibold">Analysis Report</h3>
+                      <Badge className="bg-success text-success-foreground">
+                        Completed
                       </Badge>
-                      {report.status === 'completed' && report.score > 0 && (
-                        <Badge variant="outline" className={getScoreColor(report.score)}>
-                          Score: {report.score}/100
-                        </Badge>
-                      )}
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span>{report.location}</span>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center space-x-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span>{formatDate(report.generatedAt)}</span>
+                        <span>{formatDate(report.timestamp || '')}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className="text-muted-foreground">
-                          {report.analysisRadius}km radius • {report.size}
+                          Report ID: {report.id}
                         </span>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex space-x-2 ml-4">
-                    {report.status === 'completed' && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleView(report.id)}
-                          title="View Report"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleDownload(report.id)}
-                          title="Download Report"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleView(report)}
+                      title="View Report"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDownload(report)}
+                      title="Download Report"
+                    >
+                      <Download className="w-4 h-4" />
+                    </Button>
                     <Button
                       variant="outline"
                       size="icon"
@@ -205,22 +305,40 @@ export const Reports: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-
-                {report.status === 'processing' && (
-                  <div className="mt-4 bg-warning/10 border border-warning/20 rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-warning"></div>
-                      <span className="text-sm">Processing analysis...</span>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))
         )}
       </div>
 
-      
+      {/* View Report Modal */}
+      <Dialog open={viewingReport.isOpen} onOpenChange={(open) => setViewingReport(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-semibold">
+              Hydrogen Site Analysis Report
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setViewingReport(prev => ({ ...prev, isOpen: false }))}
+              className="hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </DialogHeader>
+
+          <div className="mt-4">
+            <AnalysisReportVisualization data={viewingReport.data} />
+          </div>
+
+          <div className="flex justify-end pt-6 border-t border-border">
+            <Button variant="outline" onClick={() => setViewingReport(prev => ({ ...prev, isOpen: false }))}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

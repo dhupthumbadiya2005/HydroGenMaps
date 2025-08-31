@@ -22,6 +22,7 @@ export interface AnalysisResponse {
 export interface SaveReportRequest {
   message: string;
   email: string;
+  name: string;
 }
 
 export interface ParsedAnalysisData {
