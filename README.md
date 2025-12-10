@@ -5,7 +5,8 @@
 HydroGenMaps is an AI-powered Geospatial Decision Support System (DSS) designed to optimize site selection and infrastructure planning for Green Hydrogen projects. It integrates geospatial analytics, machine learning, and generative AI to address fragmented hydrogen infrastructure planning and improve capital allocation.
 
 ## YOUTUBE VIDEO DEMO:-
-[YouTube Video]([https://www.youtube.com/watch?v=YOUR_VIDEO_ID](https://youtu.be/cVxb_ya0sCs?si=LMQ9BcyDD2SwXHgh))
+[YouTube Video](https://youtu.be/cVxb_ya0sCs?si=LMQ9BcyDD2SwXHgh)
+
 
 
 ---
