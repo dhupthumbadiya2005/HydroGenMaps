@@ -1,73 +1,142 @@
-# Welcome to your Lovable project
+# **HydroGenMaps – Green Hydrogen Infrastructure Optimization Platform**
 
-## Project info
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Stack](https://img.shields.io/badge/Stack-FastAPI%20|%20Django%20|%20React%20|%20Mapbox%20|%20XGBoost%20|%20Mistral--7B%20\(Groq\)-blue)
 
-**URL**: https://lovable.dev/projects/8075b9a9-5b9f-445d-a754-cfe8d40688ff
+HydroGenMaps is an AI-powered Geospatial Decision Support System (DSS) designed to optimize site selection and infrastructure planning for Green Hydrogen projects. It integrates geospatial analytics, machine learning, and generative AI to address fragmented hydrogen infrastructure planning and improve capital allocation.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🚀 Key Features
 
-**Use Lovable**
+### **Geospatial Intelligence**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8075b9a9-5b9f-445d-a754-cfe8d40688ff) and start prompting.
+* Interactive GIS dashboard with **Mapbox GL JS**
+* Visualization of hydrogen plants, pipelines, storage hubs, and renewable resources
+* Spatial filtering (radius selection, nearest-assets lookup)
 
-Changes made via Lovable will be committed automatically to this repo.
+### **AI-Powered Site Selection**
 
-**Use your preferred IDE**
+* Core Recommendation Engine combining:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+  * Geospatial distance calculations
+  * Normalized MCDA scoring
+  * XGBoost-based risk predictions
+* Adjustable user priorities for Infrastructure, Environment, and Economy
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### **Generative AI Insights**
 
-Follow these steps:
+* **Mistral-7B on Groq LPUs** for ultra-fast inference
+* Automated site summaries & investment-oriented insights
+* RAG-powered chatbot (**H2Bot**) for querying reports and asset details
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### **Report & Asset Management**
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+* Django-based system for storing, comparing, and exporting analysis reports
+* Role-based authentication using **Firebase**
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+## 🏗️ Architecture Overview
+
+### **Frontend**
+
+* **React.js** for a component-based SPA
+* **Mapbox GL JS** for GPU-accelerated vector maps
+* **D3.js** for dynamic visualizations (radar charts, risk plots)
+* **Firebase Auth** for secure user management
+
+### **Backend**
+
+| Component           | Technology               | Purpose                                                  |
+| ------------------- | ------------------------ | -------------------------------------------------------- |
+| Inference API       | **FastAPI**              | Handles ML scoring and real-time recommendation requests |
+| Application Backend | **Django**               | Asset CRUD, report management, admin console             |
+| Database            | **PostgreSQL + PostGIS** | Geospatial storage and spatial queries                   |
+| ML Layer            | **XGBoost**              | Tabular risk and suitability modeling                    |
+| LLM Layer           | **Mistral-7B (Groq)**    | Generative summaries, RAG-based chatbot                  |
+
+---
+
+## ⚙️ Installation & Setup
+
+### **Prerequisites**
+
+* Python 3.9+
+* Node.js 16+
+* PostgreSQL (PostGIS recommended)
+* Mapbox API Key
+* Groq API Key
+
+---
+
+### **Backend Setup**
+
+```bash
+git clone https://github.com/dhupthumbadiya2005/HydroGenMaps.git
+cd HydroGenMaps/backend
+
+pip install -r requirements.txt
+
+# Start FastAPI (ML inference)
+uvicorn main:app --reload
+
+# Start Django backend
+python manage.py runserver
 ```
 
-**Edit a file directly in GitHub**
+### **Frontend Setup**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+cd HydroGenMaps/frontend
 
-**Use GitHub Codespaces**
+npm install
+npm start
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 🧠 Core Recommendation Engine Logic
 
-This project is built with:
+1. User selects a location and radius
+2. System retrieves nearby assets via PostGIS spatial queries
+3. All metrics normalized into a unified scoring space
+4. XGBoost model predicts risk / site viability
+5. Final score computed using weighted MCDA:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+Final Score =
+(Infra Score × W_infra) +
+(Environment Score × W_envi) +
+(Economic Score × W_econ) +
+XGBoost Risk Score
+```
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/8075b9a9-5b9f-445d-a754-cfe8d40688ff) and click on Share -> Publish.
+## 📁 Project Structure
 
-## Can I connect a custom domain to my Lovable project?
+```
+HydroGenMaps/
+│── backend/
+│   ├── fastapi/          # ML inference service
+│   ├── django/           # Asset & report management
+│   └── db/               # PostgreSQL/PostGIS schemas
+│
+│── frontend/
+│   ├── components/       # React UI components
+│   ├── map/              # Mapbox layers & interactions
+│   └── visualizations/   # D3.js charts & graphs
+```
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🤝 Contribution
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Contributions are welcome. Please read `CONTRIBUTING.md` before submitting PRs.
+
+---
+
+## 📄 License
+
+Licensed under the MIT License. See `LICENSE` for details.
